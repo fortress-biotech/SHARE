@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+DC="${DC:-exec}"
+
+# If we're running in CI we need to disable TTY allocation for docker-compose
+# commands that enable it by default, such as exec and run.
+TTY=""
+if [[ ! -t 1 ]]; then
+  TTY="-T"
+fi
+
+# -----------------------------------------------------------------------------
+# Helper functions start with _ and aren't listed in this script's help menu.
+# -----------------------------------------------------------------------------
+
+function _dc {
+  docker-compose "${DC}" ${TTY} "${@}"
+}
+
+# -----------------------------------------------------------------------------
+
+function cmd {
+  # Run any command you want in the worker container
+  # _dc worker "${@}"
+  _dc --rm --no-deps worker "${@}"
+}
+
+# function worker-cmd {
+#   # Run any command you want in the worker container
+#   # _dc worker "${@}"
+#   _dc --rm --no-deps worker "${@}"
+# }
+
+function bash {
+  # Start a Bash session in the worker container
+  cmd bash "${@}"
+}
+
+function sharectl {
+  cmd sharectl "${@}"
+}
+
+# -----------------------------------------------------------------------------
+
+function _build_run_down {
+  docker-compose build
+  docker-compose run ${TTY} "${@}"
+  docker-compose down
+}
+
+function init {
+  # docker network create share_default --subnet 172.24.24.0/24
+
+  docker-compose pull
+  docker-compose up requirements
+  docker-compose up -d postgres
+  docker-compose up -d elasticsearch
+  migrate
+  # init-elasticsearch
+  down
+
+  # Source.objects.filter(name='gov.nih').update(canonical=True)
+  # Source.objects.filter(name='gov.clinicaltrials').update(canonical=True)
+  # Source.objects.filter(name='gov.pubmedcentral').update(canonical=True)
+
+  # Source.objects.filter(name='gov.nih').update(disabled=False)
+  # Source.objects.filter(name='gov.clinicaltrials').update(disabled=False)
+  # Source.objects.filter(name='gov.pubmedcentral').update(disabled=False)
+
+  # sharectl schedule 'gov.nih' --complete
+  # sharectl schedule 'gov.clinicaltrials' --complete
+  # sharectl schedule 'gov.pubmedcentral.pmc' --complete
+
+  # sharectl schedule 'gov.nih' --complete
+  # sharectl schedule 'gov.clinicaltrials' --complete
+  # sharectl schedule 'gov.pubmedcentral.pmc' --complete
+}
+
+function init-elasticsearch {
+  docker-compose run --rm --no-deps worker sharectl search setup --initial
+}
+
+function migrate {
+  docker-compose run --rm --no-deps worker python manage.py migrate
+}
+
+# -----------------------------------------------------------------------------
+
+function up {
+  docker-compose pull
+  docker-compose up requirements
+  docker-compose up -d postgres
+  docker-compose up -d elasticsearch
+
+  # Migrate DBs
+  migrate
+
+  docker-compose up -d rabbitmq
+  docker-compose up -d worker
+  docker-compose up -d --build web
+  # docker-compose up -d web
+  docker-compose up -d indexer
+  docker-compose up -d frontend
+}
+
+function down {
+  docker-compose down
+}
+
+function console {
+  docker-compose run --rm --no-deps worker bash
+}
+
+function django {
+  docker-compose run --rm --no-deps worker python manage.py shell_plus
+}
+
+function logs {
+  docker-compose logs -f worker
+}
+
+function psql {
+  # Connect to PostgreSQL with psql
+  # shellcheck disable=SC1091
+  . .env
+  _dc postgres psql -U "${POSTGRES_USER}" "${@}"
+}
+
+function test {
+  # Run test suite
+  _dc -e "MIX_ENV=test" web mix test "${@}"
+}
+
+function fetch {
+  sharectl fetch "${@}" --start=1990-01-01 --end=2021-12-01
+  # sharectl fetch "${@}" --start=1990-01-01 --end=2021-12-01 --out=./fetched/
+}
+
+function harvest {
+  sharectl harvest "${@}" --start=1990-01-01 --end=2021-12-01
+}
+
+function ingest {
+  sharectl ingest "${@}"
+}
+
+function process {
+  # fetch "${@}" --start=1990-01-01 --end=2021-12-01
+  harvest "${@}" --start=1990-01-01 --end=2021-12-01
+  ingest "${@}"
+}
+
+function process-all {
+  process 'gov.nih'
+  process 'gov.clinicaltrials'
+  process 'gov.pubmedcentral.pmc'
+
+  sharectl schedule 'gov.nih' --start=1990-01-01 --end=2021-12-01
+  sharectl schedule 'gov.clinicaltrials' --start=1990-01-01 --end=2021-12-01
+  sharectl schedule 'gov.pubmedcentral.pmc' --start=1990-01-01 --end=2021-12-01
+  sharectl schedule 'com.nature' --start=1990-01-01 --end=2021-12-01
+}
+
+function git-merge-upstream-repo-into-fork {
+  git checkout master
+  git pull https://github.com/CenterForOpenScience/SHARE.git develop
+  # git pull https://github.com/CenterForOpenScience/SHARE.git master
+  git push origin master
+}
+
+# -----------------------------------------------------------------------------
+
+function help {
+  printf "%s <task> [args]\n\nTasks:\n" "${0}"
+
+  compgen -A function | grep -v "^_" | cat -n
+
+  printf "\nExtended help:\n  Each task has comments for general usage\n"
+}
+
+# This idea is heavily inspired by: https://github.com/adriancooney/Taskfile
+TIMEFORMAT=$'\nTask completed in %3lR'
+time "${@:-help}"

@@ -100,7 +100,11 @@ class NIHHarvester(BaseHarvester):
 
         if month_column.lower() == u"all":
             return (None, fiscal_year, url)
-        elif re.match(r'[A-Za-z\s]* [0-9]{4}, WEEK \d+', month_column):
+        elif re.match(r'[A-Za-z\s]* [0-9]{4}, WEEK \d+', month_column.upper()):
+            date = self.parse_month_column(month_column, day_of_week)
+            return (date, fiscal_year, url)
+        elif re.match(r'[A-Za-z\s]* [0-9]{4}. WEEK \d+', month_column.upper()):
+            month_column = month_column.replace(".", ",")
             date = self.parse_month_column(month_column, day_of_week)
             return (date, fiscal_year, url)
         else:

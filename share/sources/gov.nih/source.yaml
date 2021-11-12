@@ -1,7 +1,7 @@
 configs:
 - base_url: https://exporter.nih.gov/
   disabled: false
-  earliest_date: null
+  earliest_date: 1985-01-01T00:00:00Z
   harvester: gov.nih
   harvester_kwargs:
       table_url: https://exporter.nih.gov/ExPORTER_Catalog.aspx/

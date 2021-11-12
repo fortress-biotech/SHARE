@@ -1,7 +1,7 @@
 configs:
 - base_url: https://clinicaltrials.gov/ct2/results
   disabled: false
-  earliest_date: null
+  earliest_date: 1999-09-20T00:00:00Z
   harvester: gov.clinicaltrials
   harvester_kwargs: {}
   label: gov.clinicaltrials
