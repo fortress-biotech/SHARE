@@ -1,7 +1,9 @@
 configs:
 - base_url: https://exporter.nih.gov/
   disabled: false
-  earliest_date: 1985-01-01T00:00:00Z
+  full_harvest: true
+  # earliest_date: 1985-01-01T00:00:00Z
+  earliest_date: 1985-01-01
   harvester: gov.nih
   harvester_kwargs:
       table_url: https://exporter.nih.gov/ExPORTER_Catalog.aspx/
@@ -14,3 +16,4 @@ home_page: http://exporter.nih.gov/
 long_title: NIH Research Portal Online Reporting Tools
 name: gov.nih
 user: providers.gov.nih
+canonical: true

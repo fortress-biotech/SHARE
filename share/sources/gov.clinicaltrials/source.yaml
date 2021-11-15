@@ -1,6 +1,7 @@
 configs:
 - base_url: https://clinicaltrials.gov/ct2/results
   disabled: false
+  full_harvest: true
   earliest_date: 1999-09-20T00:00:00Z
   harvester: gov.clinicaltrials
   harvester_kwargs: {}
@@ -13,3 +14,4 @@ home_page: https://clinicaltrials.gov/
 long_title: ClinicalTrials.gov
 name: gov.clinicaltrials
 user: providers.gov.clinicaltrials
+canonical: true
