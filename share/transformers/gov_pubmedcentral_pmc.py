@@ -1,10 +1,16 @@
+import logging
 import pendulum
 import re
 
+from share.exceptions import TransformError
 from share.transform.chain import ctx
 from share.transform.chain.links import *
 from share.transform.chain.soup import SoupXMLTransformer, SoupXMLDict, Soup
 from share.transform.chain.parsers import Parser
+
+
+logger = logging.getLogger(__name__)
+
 
 PMCID_FORMAT = 'http://www.ncbi.nlm.nih.gov/pmc/articles/PMC{}/'
 PMID_FORMAT = 'http://www.ncbi.nlm.nih.gov/pubmed/{}'
@@ -74,7 +80,23 @@ class JournalOrganization(Parser):
     )
 
     def get_issns(self, obj):
-        return [t['#text'] for t in obj['issn']]
+        if obj is None:
+            return []
+
+        if isinstance(obj, int) or isinstance(obj, str):
+            return [obj]
+
+        if not isinstance(obj, dict):
+            return []
+
+        if isinstance(obj['issn'], int) or isinstance(obj['issn'], str):
+            return [obj['issn']]
+
+        if isinstance(obj['issn'], dict):
+            return [obj['issn']['#text']]
+
+        if not isinstance(obj['issn'], list):
+            return [t['#text'] for t in obj['issn']]
 
 
 class Journal(Parser):
@@ -305,7 +327,7 @@ class Article(Parser):
             'research-article': 'article',
             'retraction': 'retraction',
             'review-article': 'article',
-            # 'systematic-review'
+            'systematic-review': 'article'
         }
         try:
             return article_type_map[article_type]
@@ -313,9 +335,13 @@ class Article(Parser):
             raise TransformError
 
     def guess_type_from_related(self, related):
+        if related is None:
+            raise Exception()
         if not isinstance(related, list):
             related = [related]
-        if any(r.soup['related-article-type'] == 'retracted-article' for r in related):
+        if any(r == 'retracted-article' for r in related):
+            return 'retraction'
+        if any(hasattr(r, 'soup') and r.soup['related-article-type'] == 'retracted-article' for r in related):
             return 'retraction'
         raise Exception()
 
@@ -355,10 +381,12 @@ class Article(Parser):
         return None
 
     def get_print_information(self, ctx):
-        volume = ctx['volume']['#text']
-        issue = ctx['issue']['#text']
-        fpage = ctx['fpage']['#text']
-        lpage = ctx['lpage']['#text']
+        if ctx is None:
+            return "N/A"
+        volume = ctx['volume']['#text'] if isinstance(ctx['volume'], dict) else "N/A"
+        issue = ctx['issue']['#text'] if isinstance(ctx['issue'], dict) else "N/A"
+        fpage = ctx['fpage']['#text'] if isinstance(ctx['fpage'], dict) else "N/A"
+        lpage = ctx['lpage']['#text'] if isinstance(ctx['lpage'], dict) else "N/A"
         return "This work appeared in volume {} issue {} from pages {} - {}.".format(volume, issue, fpage, lpage)
 
 

@@ -34,6 +34,9 @@ raven==6.10.0  # BSD
 requests==2.25.1  # Apache 2.0
 stevedore==3.3.0  # Apache 2.0
 xmltodict==0.12.0  # MIT
+remote_pdb==2.1.0
+pdbpp==0.10.3
+watchdog[watchmedo]==2.1.6
 
 
 # djangorestframework-jsonapi==4.2.1  # MIT

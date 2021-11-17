@@ -161,8 +161,8 @@ function init {
 }
 
 function setup {
-  docker-compose pull
-  docker-compose up requirements
+  pull
+  requirements
 
   # docker-compose up -d postgres elasticsearch
 
@@ -204,20 +204,51 @@ function _build_run_down {
   docker-compose down
 }
 
+function restart {
+  down
+  up
+}
+
 function up {
-  docker-compose pull
-  # docker-compose up requirements
+  pull
+  requirements
   docker-compose up -d postgres elasticsearch
 
   # Migrate DBs
   migrate
 
   docker-compose up -d rabbitmq
-  docker-compose up -d worker
+  up-worker
+
+  # # docker-compose up -d web
+  # docker-compose up -d --build web
+  # docker-compose up -d indexer frontend
+  up-rest
+}
+
+function up-rest {
   # docker-compose up -d web
   docker-compose up -d --build web
-  docker-compose up -d indexer
-  docker-compose up -d frontend
+  docker-compose up -d indexer frontend
+}
+
+function up-fast {
+  docker-compose up -d postgres elasticsearch
+
+  # Migrate DBs
+  # migrate
+
+  docker-compose up -d rabbitmq
+  up-worker
+
+  # docker-compose up -d --build web
+  docker-compose up -d web
+  docker-compose up -d indexer frontend
+}
+
+function up-worker {
+  docker-compose up -d worker
+  # docker-compose run --service-ports worker
 }
 
 function down {
@@ -234,6 +265,20 @@ function django {
 
 function logs {
   docker-compose logs -f worker
+}
+
+function pull {
+  docker-compose pull
+}
+
+function requirements {
+  docker-compose up requirements
+}
+
+function recompile-celery {
+  down
+  up-fast
+
 }
 
 # function psql {
@@ -259,7 +304,14 @@ function enqueue-harvesters {
   sharectl schedule 'gov.nih' --start=1985-01-01 --end=2021-11-14 --tasks
   sharectl schedule 'gov.pubmedcentral.pmc' --start=1999-01-01 --end=2021-11-14 --tasks
 
+  sharectl schedule 'gov.nih' --start=1995-01-01 --end=2021-11-14 --tasks
+  sharectl schedule 'gov.pubmedcentral.pmc' --start=2009-01-01 --end=2021-11-14 --tasks
+
   # Not working yet
+
+  # sharectl fetch 'gov.clinicaltrials' --start=1999-09-20 --end=2021-11-14
+  # sharectl ingest 'gov.clinicaltrials'
+
   # sharectl schedule 'gov.clinicaltrials' --start=1999-09-20 --end=2021-11-14 --tasks
 
   # Not yet setup

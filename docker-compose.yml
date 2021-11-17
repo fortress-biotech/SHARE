@@ -63,6 +63,8 @@ services:
     volumes:
       - "${POSTGRES_DATA_VOL:-postgres_data_vol}:/var/lib/postgresql/data/"
     stdin_open: true
+    env_file:
+      - .docker-compose.env
 
   ##################
   # SHARE software #
@@ -70,11 +72,16 @@ services:
 
   requirements:
     image: quay.io/centerforopenscience/share:develop
+        # /usr/local/bin/python -m pip install --upgrade pip  &&
+        # pip install -e . &&
+        # pip install watchdog[watchmedo]
+        # apt autoremove -y &&
     command:
       - /bin/bash
       - -c
       - apt-get update &&
-        apt-get install -y gcc &&
+        apt-get install -y gcc libyaml-dev telnet &&
+        pip install -U pip &&
         pip install -r requirements.txt -r dev-requirements.txt &&
         (python3 -m compileall /usr/local/lib/python3.6 || true) &&
         rm -Rf /python3.6/* &&
@@ -97,7 +104,11 @@ services:
 
   worker:
     image: quay.io/centerforopenscience/share:develop
+    # command: pip install watchdog[watchmedo] && watchmedo auto-restart --directory="/code:cached" --pattern="*.py" --recursive -- /usr/local/bin/celery worker --app=project --uid=daemon --loglevel=INFO
     command: /usr/local/bin/celery --app project worker --uid daemon -l INFO
+    # command: 
+    #   - watchmedo auto-restart --directory=/code:cached --pattern=*.py --recursive -- \
+    #     /usr/local/bin/celery --app project worker --uid daemon -l INFO
     depends_on:
       - postgres
       - rabbitmq
@@ -105,11 +116,22 @@ services:
       - elasticsearch
       - indexer
     volumes:
+      # - ./.pdbrc.py:/root/.pdbrc.py
       - ./:/code:cached
       - share_requirements_vol:/usr/local/lib/python3.6
     env_file:
       - .docker-compose.env
     stdin_open: true
+    tty: true
+    ports:
+      # - 6900-7000:6900-7000
+      - 6944:6942
+      # - 6904:6900
+    environment:
+      - CELERY_RDB_HOST=0.0.0.0. # to be able to telnet from outside the container
+      # - CELERY_RDB_PORT=6900
+      - CELERY_RDB_PORT=6942
+      - PYTHONUNBUFFERED=1       # any non-empty string will do    
 
   web:
     image: quay.io/centerforopenscience/share:develop
@@ -127,6 +149,7 @@ services:
     env_file:
       - .docker-compose.env
     stdin_open: true
+    tty: true
 
   indexer:
     image: quay.io/centerforopenscience/share:develop

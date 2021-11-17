@@ -1,9 +1,12 @@
 import re
+import logging
 
 from share.transform.chain import *
 import share.transform.chain.links as tools
 from share.transform.chain.utils import format_address
 
+
+logger = logging.getLogger(__name__)
 
 PROJECT_BASE_URL = 'https://projectreporter.nih.gov/project_info_description.cfm?aid={}'
 FOA_BASE_URL = 'https://grants.nih.gov/grants/guide/pa-files/{}.html'
@@ -271,6 +274,21 @@ class Project(Parser):
         }
         return org_ctx
 
+    def get_pi_list(self, ctx):
+
+        # logger.error(json.dumps(ctx['PIS'], indent=2))
+
+
+        # {"@http://www.w3.org/2001/XMLSchema-instance:nil": "true"}
+        if not isinstance(ctx['PIS'], dict):
+            return []
+
+        # logger.error(json.dumps(ctx['PIS']['PI'], indent=2))
+
+        if hasattr(ctx['PIS'], 'PI'):
+            return ctx['PIS']['PI'] if isinstance(ctx['PIS']['PI'], list) else [ctx['PIS']['PI']]
+        return []
+
     def get_pi(self, ctx, primary=True):
         '''
             <PI>
@@ -278,9 +296,13 @@ class Project(Parser):
                 <PI_ID>2094159 (contact)</PI_ID>
             </PI>
         '''
-        pi_list = ctx['PIS']['PI'] if isinstance(ctx['PIS']['PI'], list) else [ctx['PIS']['PI']]
+
+        pi_list = self.get_pi_list(ctx)
         org_ctx = self.get_organization_ctx(ctx)
         # if only one primary contact is assumed
+        
+        if len(pi_list) < 1:
+            return []
         if len(pi_list) <= 1:
             if not primary:
                 return None
