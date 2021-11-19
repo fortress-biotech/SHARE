@@ -2,14 +2,14 @@
 name = "share"
 version = "21.3.1"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Sitch <sitch@sitch.com>"]
 packages = [
-  { include = "api" },
+  # { include = "api" },
   # { include = "bin" },
   # { include = "bots" },
   # { include = "osf_oauth2_adapter" },
   # { include = "project" },
-  { include = "share" },
+  { include = "share", from = "share" },
   # { include = "templates" },
 ]
 
