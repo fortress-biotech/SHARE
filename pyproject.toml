@@ -4,17 +4,18 @@ version = "21.3.1"
 description = ""
 authors = ["Sitch <sitch@sitch.com>"]
 packages = [
-  # { include = "api" },
+  { include = "api" },
   # { include = "bin" },
   # { include = "bots" },
   # { include = "osf_oauth2_adapter" },
   # { include = "project" },
-  { include = "share", from = "share" },
+  { include = "share" },
   # { include = "templates" },
 ]
+include = ["share/schema/schema-spec.yaml"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 bcrypt = "3.2.0"
 beautifulsoup4 = "4.9.3"
 celery = "5.1.2"
